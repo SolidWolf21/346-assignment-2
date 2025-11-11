@@ -57,7 +57,7 @@ public class FileSystem {
     }
 
     // The create function
-    public void CREATE(String FileName) throws Exception {
+    public void createFile(String FileName) throws Exception {
         lock.writeLock().lock();
         try {
             if (FileName.lenght() > FEntry.Max_Name_length)
@@ -79,7 +79,7 @@ public class FileSystem {
     }
 
     //The delete function
-    public void DELETE(String FileName) throws Exception {
+    public void deleteFile(String FileName) throws Exception {
         lock.writeLock().lock();
         try {
             FEntry entry = findEntry(FileName);
@@ -129,8 +129,8 @@ public class FileSystem {
             throw new Exception( "ERROR : File " + FileName + " does not exist.");
 
             //clear old blocks if necessary
-            DELETE(FileName);
-            CREATE(FileName);
+            deleteFile(FileName);
+            createFile(FileName);
             entry = findEntry(FileName);
 
             int offset = 0;
@@ -161,7 +161,7 @@ public class FileSystem {
     }
 
     // the read of a file function
-    public byte[] READ(String FileName) throws Exception {
+    public byte[] readFile(String FileName) throws Exception {
         lock.readLock().lock();
         try {
             FEntry entry = findEntry(FileName);
@@ -178,8 +178,28 @@ public class FileSystem {
                 byte[] block = new byte[BlockIndex];
                 simfs.read(block);
                 int toRead = Math.min(remaining, BLOCK_SIZE);
-                buffer.write
+                buffer.write(block, 0 , toRead);
+                remaining -= toRead;
+                FNodesIndex = fnodes[FNodesIndex].NextBlock;
             }
+            return buffer.toByteArray();
+        }
+        finally{
+            lock.readLock().unlock();
+        }
+    }
+
+    //LIST Function
+    public String[] listFiles() {
+        lock.readLock().lock();
+        try {
+            return Arrays.stream(entries)
+                   .filter(FEntry::isUsed)
+                   .map(en -> en.FileName)
+                   .toArray(String[]::new);
+        }
+        finally {
+            lock.readLock().lock();
         }
     }
 
